@@ -9,10 +9,7 @@ CREATE TABLE
         content TEXT NOT NULL,
         category VARCHAR(100),
         published BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP
-        WITH
-            TIME ZONE DEFAULT NOW(),
-            updated_at TIMESTAMP
-        WITH
-            TIME ZONE DEFAULT NOW()
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        deleted_at TIMESTAMP WITH TIME ZONE NULL,
     );

@@ -31,18 +31,18 @@ impl<T, E> Response<T, E> {
         }
     }
 
-    // pub fn custom(
-    //     status_code: StatusCode,
-    //     message: &str,
-    //     data: T,
-    //     data_error: E,
-    // ) -> Response<T, E> {
-    //     Response {
-    //         status: status_code.to_string(),
-    //         code: status_code.as_u16(),
-    //         message: message.to_string(),
-    //         data: Some(data),
-    //         data_error: Some(data_error),
-    //     }
-    // }
+    pub fn custom(
+        status_code: StatusCode,
+        message: &str,
+        data: T,
+        data_error: E,
+    ) -> Response<T, E> {
+        Response {
+            status: status_code.to_string(),
+            code: status_code.as_u16(),
+            message: message.to_string(),
+            data: Some(data),
+            data_error: Some(data_error),
+        }
+    }
 }

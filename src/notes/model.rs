@@ -14,4 +14,6 @@ pub struct NoteModel {
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
     #[serde(rename = "updatedAt")]
     pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
+    #[serde(rename = "deletedAt")]
+    pub deleted_at: Option<chrono::DateTime<chrono::Utc>>,
 }

@@ -49,7 +49,7 @@ async fn main() -> std::io::Result<()> {
             .supports_credentials();
         App::new()
             .app_data(web::Data::new(AppState { db: pool.clone() }))
-            .configure(note_routes::routes)
+            .service(web::scope("/api/v1").configure(note_routes::routes))
             .default_service(web::route().to(not_found))
             .wrap(cors)
             .wrap(Logger::default())
