@@ -1,5 +1,5 @@
-use crate::notes::model::NoteModel;
-use crate::notes::schema::{CreateNoteSchema, UpdateNoteSchema};
+use crate::modules::notes::model::NoteModel;
+use crate::modules::notes::schema::{CreateNoteSchema, UpdateNoteSchema};
 use chrono::Utc;
 use sqlx::{Error, PgPool};
 use uuid::Uuid;

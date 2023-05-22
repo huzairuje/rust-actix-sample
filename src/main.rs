@@ -2,14 +2,14 @@ mod configuration;
 mod cors;
 mod database;
 mod infrastructure;
-mod notes;
+mod modules;
+mod routes;
 
 use actix_web::http::StatusCode;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpResponse, HttpServer};
 use configuration::config::Config;
 use infrastructure::http_lib::Response;
-use notes::routes as note_routes;
 use sqlx::{Pool, Postgres};
 use std::env;
 
@@ -59,7 +59,7 @@ async fn main() -> std::io::Result<()> {
         let cors_enable = cors::cors::enable_cors();
         App::new()
             .app_data(web::Data::new(AppState { db: pool.clone() }))
-            .service(web::scope("/api/v1").configure(note_routes::routes))
+            .configure(routes::routes::initiate_routes)
             .default_service(web::route().to(not_found))
             .wrap(cors_enable)
             .wrap(Logger::default())

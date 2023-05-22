@@ -1,11 +1,11 @@
 use crate::infrastructure::http_lib::Response;
 use crate::infrastructure::validator;
 use crate::infrastructure::validator::ErrorResponse;
-use crate::notes::constants;
+use crate::modules::notes::constants;
 use crate::{
-    notes::model::NoteModel,
-    notes::schema::{CreateNoteSchema, FilterOptions, UpdateNoteSchema},
-    notes::service,
+    modules::notes::model::NoteModel,
+    modules::notes::schema::{CreateNoteSchema, FilterOptions, UpdateNoteSchema},
+    modules::notes::service,
     AppState,
 };
 use actix_web::http::StatusCode;
@@ -211,5 +211,5 @@ pub async fn delete_note_handler(
 
     let msg = constants::NOTE_SUCCESS_DELETED;
     let resp: Response<(), ()> = Response::success(StatusCode::OK, (), msg);
-    return HttpResponse::Ok().json(resp)
+    return HttpResponse::Ok().json(resp);
 }

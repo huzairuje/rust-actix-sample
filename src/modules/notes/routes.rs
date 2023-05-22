@@ -1,4 +1,4 @@
-use crate::notes::handler;
+use crate::modules::notes::handler;
 use actix_web::web;
 
 pub fn routes(conf: &mut web::ServiceConfig) {

@@ -1,7 +1,7 @@
-use crate::notes::constants;
-use crate::notes::model::NoteModel;
-use crate::notes::repository;
-use crate::notes::schema::{CreateNoteSchema, FilterOptions, UpdateNoteSchema};
+use crate::modules::notes::constants;
+use crate::modules::notes::model::NoteModel;
+use crate::modules::notes::repository;
+use crate::modules::notes::schema::{CreateNoteSchema, FilterOptions, UpdateNoteSchema};
 use sqlx::{Error, PgPool};
 
 pub async fn get_notes_service(
