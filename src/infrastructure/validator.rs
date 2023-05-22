@@ -1,5 +1,6 @@
 use serde::Serialize;
 use validator::{Validate, ValidationErrors};
+
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
     failed_field: String,

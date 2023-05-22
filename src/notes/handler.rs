@@ -211,5 +211,5 @@ pub async fn delete_note_handler(
 
     let msg = constants::NOTE_SUCCESS_DELETED;
     let resp: Response<(), ()> = Response::success(StatusCode::OK, (), msg);
-    HttpResponse::Ok().json(resp)
+    return HttpResponse::Ok().json(resp)
 }

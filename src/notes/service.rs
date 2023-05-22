@@ -11,7 +11,7 @@ pub async fn get_notes_service(
     //unwrap the filter value
     let filter_option: &FilterOptions = filter;
     let limit = filter_option.limit.unwrap_or(10);
-    let offset = (filter_option.page.unwrap_or(1) - 1) * limit;
+    let offset = (filter_option.page.unwrap_or(1) - 1) * limit.clone();
 
     // Build the query conditionally
     let mut query = String::new();
