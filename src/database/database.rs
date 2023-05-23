@@ -7,16 +7,12 @@ pub async fn initiate_database(cfg: Config) -> Result<Pool<Postgres>, Error> {
         cfg.postgres_user.unwrap_or("postgres".to_string()),
         cfg.postgres_password.unwrap_or("postgres".to_string()),
         cfg.postgres_host.unwrap_or("localhost".to_string()),
-        cfg.postgres_port.unwrap_or("5432".to_string()),
+        cfg.postgres_port.unwrap_or(5432),
         cfg.postgres_db.unwrap_or("actix_sample".to_string()),
         cfg.postgres_schema.unwrap_or("public".to_string()),
     );
 
-    let max_conn: u32 = cfg
-        .postgres_max_connection
-        .unwrap_or("10".to_string())
-        .parse()
-        .expect("Failed to parse postgres max connection");
+    let max_conn: u32 = cfg.postgres_max_connection.unwrap_or(10) as u32;
 
     let pool = PgPoolOptions::new()
         .max_connections(max_conn)

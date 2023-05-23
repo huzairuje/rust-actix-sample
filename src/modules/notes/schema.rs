@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use validator::ValidationError;
 use validator_derive::Validate;
 
 #[derive(Deserialize, Debug)]
@@ -16,19 +17,20 @@ pub struct ParamOptions {
     pub id: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Validate)]
+#[derive(Deserialize, Serialize, Debug, Validate)]
 pub struct CreateNoteSchema {
-    #[validate(length(min = 1))]
+    #[validate(custom = "validate_title")]
     pub title: String,
-    #[validate(length(min = 1))]
+    #[validate(custom = "validate_content")]
     pub content: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(custom = "validate_category")]
     pub category: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub published: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Validate)]
+#[derive(Deserialize, Serialize, Debug, Validate)]
 pub struct UpdateNoteSchema {
     #[validate(length(min = 1))]
     pub title: Option<String>,
@@ -36,4 +38,31 @@ pub struct UpdateNoteSchema {
     pub content: Option<String>,
     pub category: Option<String>,
     pub published: Option<bool>,
+}
+
+fn validate_title(title: &str) -> Result<(), ValidationError> {
+    if title.len() < 1 {
+        return Err(ValidationError::new(
+            "title must have a minimum length of 1 characters",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_content(content: &str) -> Result<(), ValidationError> {
+    if content.len() < 1 {
+        return Err(ValidationError::new(
+            "content must have minimum length of 1 characters",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_category(category: &str) -> Result<(), ValidationError> {
+    if category.len() < 1 {
+        return Err(ValidationError::new(
+            "category must have a minimum length of 1 characters",
+        ));
+    }
+    Ok(())
 }

@@ -1,7 +1,7 @@
 mod configuration;
-mod cors;
 mod database;
 mod infrastructure;
+mod middleware;
 mod modules;
 mod routes;
 
@@ -12,9 +12,11 @@ use configuration::config::Config;
 use infrastructure::http_lib::Response;
 use sqlx::{Pool, Postgres};
 use std::env;
+use std::sync::{Arc, Mutex};
 
 pub struct AppState {
     db: Pool<Postgres>,
+    cfg: Config,
 }
 
 async fn not_found() -> HttpResponse {
@@ -24,8 +26,18 @@ async fn not_found() -> HttpResponse {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    //load .env file into structs config
-    let config = Config::from_env().expect("⚠️⚠️⚠️ Failed to load .env file on the root project");
+    // Load .env file into the Config struct
+    let config_from_env =
+        Config::from_env().expect("⚠️⚠️⚠️ Failed to load .env file on the root project");
+
+    // Set the config from env onto an Arc Mutex
+    let config_arc: Arc<Mutex<Config>> = Arc::new(Mutex::new(config_from_env));
+
+    // Clone the Config struct and clone the host field separately
+    let config = config_arc.lock().unwrap().clone();
+    let host_url: String = config.host.clone().unwrap_or("localhost".to_string());
+    let port: u16 = config.port.unwrap_or(8080) as u16;
+
     // Enable log if it is enabled in the .env file
     if let Some(config_enable_log) = config.enable_log.as_ref() {
         if config_enable_log == "true" {
@@ -45,26 +57,21 @@ async fn main() -> std::io::Result<()> {
             std::process::exit(1);
         });
 
-    // parse port and host from config .env
-    let port: u16 = config
-        .port
-        .unwrap_or("8080".to_string())
-        .parse()
-        .expect("Failed to parse port");
-    let host_url: String = config.host.unwrap_or("localhost".to_string());
-
     println!("🚀🚀🚀 Server starting!");
 
     HttpServer::new(move || {
-        let cors_enable = cors::cors::enable_cors();
+        let cors_enable = middleware::cors::enable_cors();
         App::new()
-            .app_data(web::Data::new(AppState { db: pool.clone() }))
+            .app_data(web::Data::new(AppState {
+                db: pool.clone(),
+                cfg: config.clone(),
+            }))
             .configure(routes::routes::initiate_routes)
             .default_service(web::route().to(not_found))
             .wrap(cors_enable)
             .wrap(Logger::default())
     })
-    .bind((host_url, port))?
+    .bind((&*host_url, port))?
     .run()
     .await
 }

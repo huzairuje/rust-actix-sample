@@ -1,5 +1,4 @@
-use crate::modules::notes::model::NoteModel;
-use crate::modules::notes::schema::{CreateNoteSchema, UpdateNoteSchema};
+use crate::modules::notes::model::{NoteModel, NoteSaveModel, NoteUpdateModel};
 use chrono::{DateTime, Utc};
 use sqlx::postgres::PgQueryResult;
 use sqlx::{Error, PgPool};
@@ -27,12 +26,15 @@ pub async fn get_notes(
     query_result
 }
 
-pub async fn save_note(pool: &PgPool, body: &CreateNoteSchema) -> Result<NoteModel, Error> {
-    let query = "INSERT INTO notes (title,content,category) VALUES ($1, $2, $3) RETURNING *";
+pub async fn save_note(pool: &PgPool, body: NoteSaveModel) -> Result<NoteModel, Error> {
+    let query =
+        "INSERT INTO notes (title,content,category,published,created_by) VALUES ($1, $2, $3, $4, $5) RETURNING *";
     let query_result = sqlx::query_as::<_, NoteModel>(&query)
         .bind(body.title.as_str())
         .bind(body.content.as_str())
         .bind(body.category.to_owned().unwrap_or("".to_string()))
+        .bind(body.published.to_owned().unwrap_or(false))
+        .bind(body.created_by.to_owned().unwrap_or(Uuid::default()))
         .fetch_one(pool)
         .await;
 
@@ -42,16 +44,18 @@ pub async fn save_note(pool: &PgPool, body: &CreateNoteSchema) -> Result<NoteMod
 pub async fn update_note(
     pool: &PgPool,
     note_id: Uuid,
-    body: &UpdateNoteSchema,
+    body: NoteUpdateModel,
     note: NoteModel,
 ) -> Result<NoteModel, Error> {
     let now = Utc::now();
-    let query = "UPDATE notes SET title = $1, content = $2, category = $3, published = $4, updated_at = $5 WHERE id = $6 RETURNING *";
+    let query =
+        "UPDATE notes SET title = $1, content = $2, category = $3, published = $4, updated_by = $5, updated_at = $6 WHERE id = $7 RETURNING *";
     let query_result = sqlx::query_as::<_, NoteModel>(query)
-        .bind(body.title.to_owned().unwrap_or(note.title))
-        .bind(body.content.to_owned().unwrap_or(note.content))
-        .bind(body.category.to_owned().unwrap_or(note.category.unwrap()))
+        .bind(body.title)
+        .bind(body.content)
+        .bind(body.category.unwrap_or(note.category.unwrap()))
         .bind(body.published.unwrap_or(note.published.unwrap()))
+        .bind(body.updated_by.unwrap_or(note.updated_by.unwrap()))
         .bind(now)
         .bind(note_id)
         .fetch_one(pool)

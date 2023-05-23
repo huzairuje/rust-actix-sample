@@ -1,9 +1,10 @@
 use crate::infrastructure::http_lib::Response;
-use crate::modules::notes::constants;
+use crate::modules::users::constants;
+use crate::modules::users::schema::UserResponse;
 use crate::{
-    modules::notes::model::NoteModel,
-    modules::notes::schema::{CreateNoteSchema, FilterOptions, UpdateNoteSchema},
-    modules::notes::service,
+    modules::users::model::UserModel,
+    modules::users::schema::{CreateUserRequest, UpdateUserRequest},
+    modules::users::service,
     AppState,
 };
 use actix_web::http::StatusCode;
@@ -17,62 +18,33 @@ pub async fn health_checker_handler() -> impl Responder {
     return HttpResponse::Ok().json(resp);
 }
 
-#[get("")]
-pub async fn note_list_handler(
-    filter: web::Query<FilterOptions>,
-    data: web::Data<AppState>,
-) -> impl Responder {
-    //get list note
-    let notes: Result<Vec<NoteModel>, String> =
-        service::get_notes_service(&data.db, &filter.into_inner()).await;
-    if let Err(err) = notes {
-        let resp: Response<(), ()> =
-            Response::error(StatusCode::INTERNAL_SERVER_ERROR, err.as_str());
-        return HttpResponse::InternalServerError().json(resp);
-    }
-
-    let list_notes: Vec<NoteModel> = notes.unwrap_or_else(|err| {
-        // This closure is not executed when the result is Ok
-        eprintln!("An error occurred: {:?}", err);
-        let msg = constants::NOTE_CANT_BE_FETCHED;
-        let resp: Response<Vec<NoteModel>, ()> =
-            Response::error(StatusCode::INTERNAL_SERVER_ERROR, msg);
-        HttpResponse::InternalServerError().json(resp);
-        Vec::new() // Fallback value
-    });
-    let msg = constants::NOTE_FOUND;
-    let resp: Response<Vec<NoteModel>, ()> = Response::success(StatusCode::OK, list_notes, msg);
-    return HttpResponse::Ok().json(resp);
-}
-
 #[post("")]
-pub async fn create_note_handler(
-    body: web::Json<CreateNoteSchema>,
+pub async fn register_user_handler(
+    body: web::Json<CreateUserRequest>,
     data: web::Data<AppState>,
 ) -> impl Responder {
     //validate the struct from body
     if let Err(errors) = body.validate() {
         let resp = Response::custom(
             StatusCode::BAD_REQUEST,
-            StatusCode::BAD_REQUEST.as_str(),
+            StatusCode::BAD_REQUEST.to_string().as_str(),
             (),
             errors,
         );
         return HttpResponse::BadRequest().json(resp);
     }
 
-    let req: &CreateNoteSchema = &body.0;
+    let req: &CreateUserRequest = &body.0;
 
     // save the notes
-    let result_note: Result<NoteModel, String> = service::save_note_service(&data.db, req).await;
-    let note = match result_note {
-        Ok(note) => note,
+    let result_user: Result<UserResponse, String> =
+        service::register_user_service(&data.db, req).await;
+    let user = match result_user {
+        Ok(user) => user,
         Err(err) => {
-            return if err.contains(&constants::NOTE_TITLE_ALREADY_EXIST) {
-                let resp: Response<(), ()> = Response::error(
-                    StatusCode::BAD_REQUEST,
-                    &constants::NOTE_TITLE_ALREADY_EXIST,
-                );
+            return if err.contains(&constants::USERNAME_ALREADY_EXIST) {
+                let resp: Response<(), ()> =
+                    Response::error(StatusCode::BAD_REQUEST, &constants::USERNAME_ALREADY_EXIST);
                 HttpResponse::BadRequest().json(resp)
             } else {
                 let resp: Response<(), ()> =
@@ -82,20 +54,20 @@ pub async fn create_note_handler(
         }
     };
 
-    let msg = constants::NOTE_SUCCESS_SAVED;
-    let resp: Response<NoteModel, ()> = Response::success(StatusCode::OK, note, msg);
+    let msg = constants::USER_SUCCESS_SAVED;
+    let resp: Response<UserResponse, ()> = Response::success(StatusCode::OK, user, msg);
     return HttpResponse::Ok().json(resp);
 }
 
-#[get("/{id}")]
-pub async fn get_note_handler(
+#[get("/detail")]
+pub async fn get_user_detail_handler(
     path: web::Path<String>,
     data: web::Data<AppState>,
 ) -> impl Responder {
     let note_id_str = path.into_inner();
 
     // Attempt to parse the UUID from the path
-    let note_id = match uuid::Uuid::parse_str(&note_id_str) {
+    let user_id = match uuid::Uuid::parse_str(&note_id_str) {
         Ok(uuid) => uuid,
         Err(err) => {
             eprintln!("match uuid::Uuid::parse_str, got err : {:?}", err);
@@ -105,38 +77,38 @@ pub async fn get_note_handler(
         }
     };
 
-    let note_detail: NoteModel = match service::get_note_detail_service(&data.db, note_id).await {
+    let note_detail: UserModel = match service::get_user_detail_service(&data.db, user_id).await {
         Ok(note) => note,
         Err(err) => {
-            return if err.contains(constants::NOTE_NOT_FOUND) {
+            return if err.contains(constants::USER_NOT_FOUND) {
                 let resp: Response<(), ()> =
-                    Response::error(StatusCode::NOT_FOUND, constants::NOTE_NOT_FOUND);
+                    Response::error(StatusCode::NOT_FOUND, constants::USER_NOT_FOUND);
                 HttpResponse::NotFound().json(resp)
             } else {
                 let resp: Response<(), ()> = Response::error(
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    constants::DETAIL_NOTE_CANT_BE_FETCHED,
+                    constants::DETAIL_USER_CANT_BE_FETCHED,
                 );
                 return HttpResponse::InternalServerError().json(resp);
             }
         }
     };
 
-    let resp: Response<NoteModel, ()> =
-        Response::success(StatusCode::OK, note_detail, constants::NOTE_FOUND);
+    let resp: Response<UserModel, ()> =
+        Response::success(StatusCode::OK, note_detail, constants::USER_FOUND);
     return HttpResponse::Ok().json(resp);
 }
 
-#[put("/{id}")]
-pub async fn edit_note_handler(
+#[put("/detail")]
+pub async fn update_user_handler(
     path: web::Path<String>,
-    body: web::Json<UpdateNoteSchema>,
+    body: web::Json<UpdateUserRequest>,
     data: web::Data<AppState>,
 ) -> impl Responder {
     let note_id_str = path.into_inner();
 
     // Attempt to parse the UUID from the path
-    let note_id = match uuid::Uuid::parse_str(&note_id_str) {
+    let user_id = match uuid::Uuid::parse_str(&note_id_str) {
         Ok(uuid) => uuid,
         Err(err) => {
             eprintln!("match uuid::Uuid::parse_str, got err : {:?}", err);
@@ -157,22 +129,20 @@ pub async fn edit_note_handler(
         return HttpResponse::BadRequest().json(resp);
     }
 
-    let req: &UpdateNoteSchema = &body.0;
+    let req: &UpdateUserRequest = &body.0;
     //update the note
-    let note_updated: Result<NoteModel, String> =
-        service::update_note_service(&data.db, note_id, req).await;
-    let note = match note_updated {
+    let user_updated: Result<UserResponse, String> =
+        service::update_user_service(&data.db, user_id, req).await;
+    let user = match user_updated {
         Ok(note) => note,
         Err(err) => {
-            return if err.contains(&constants::NOTE_TITLE_ALREADY_EXIST) {
-                let resp: Response<(), ()> = Response::error(
-                    StatusCode::BAD_REQUEST,
-                    &constants::NOTE_TITLE_ALREADY_EXIST,
-                );
-                HttpResponse::BadRequest().json(resp)
-            } else if err.contains(&constants::NOTE_NOT_FOUND) {
+            return if err.contains(&constants::USERNAME_ALREADY_EXIST) {
                 let resp: Response<(), ()> =
-                    Response::error(StatusCode::NOT_FOUND, &constants::NOTE_NOT_FOUND);
+                    Response::error(StatusCode::BAD_REQUEST, &constants::USERNAME_ALREADY_EXIST);
+                HttpResponse::BadRequest().json(resp)
+            } else if err.contains(&constants::USER_NOT_FOUND) {
+                let resp: Response<(), ()> =
+                    Response::error(StatusCode::NOT_FOUND, &constants::USER_NOT_FOUND);
                 HttpResponse::NotFound().json(resp)
             } else {
                 let resp: Response<(), ()> =
@@ -182,24 +152,24 @@ pub async fn edit_note_handler(
         }
     };
 
-    let msg = constants::NOTE_SUCCESS_PATCHED;
-    let resp: Response<NoteModel, ()> = Response::success(StatusCode::OK, note, msg);
+    let msg = constants::USER_SUCCESS_PATCHED;
+    let resp: Response<UserResponse, ()> = Response::success(StatusCode::OK, user, msg);
     return HttpResponse::Ok().json(resp);
 }
 
-#[delete("/{id}")]
-pub async fn delete_note_handler(
+#[delete("/deactivate")]
+pub async fn deactivate_user_handler(
     path: web::Path<uuid::Uuid>,
     data: web::Data<AppState>,
 ) -> impl Responder {
-    let note_id = path.into_inner();
-    let delete_note = service::delete_note_service(&data.db, note_id).await;
+    let user_id = path.into_inner();
+    let delete_note = service::deactivate_user(&data.db, user_id).await;
     match delete_note {
         Ok(_) => {}
         Err(err_delete_note) => {
-            return if err_delete_note.contains(&constants::NOTE_NOT_FOUND) {
+            return if err_delete_note.contains(&constants::USER_NOT_FOUND) {
                 let resp: Response<(), ()> =
-                    Response::error(StatusCode::NOT_FOUND, &constants::NOTE_NOT_FOUND);
+                    Response::error(StatusCode::NOT_FOUND, &constants::USER_NOT_FOUND);
                 HttpResponse::NotFound().json(resp)
             } else {
                 let resp: Response<(), ()> =
@@ -209,7 +179,7 @@ pub async fn delete_note_handler(
         }
     };
 
-    let msg = constants::NOTE_SUCCESS_DELETED;
+    let msg = constants::USER_SUCCESS_DELETED;
     let resp: Response<(), ()> = Response::success(StatusCode::OK, (), msg);
     return HttpResponse::Ok().json(resp);
 }

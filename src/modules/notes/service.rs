@@ -1,5 +1,5 @@
 use crate::modules::notes::constants;
-use crate::modules::notes::model::NoteModel;
+use crate::modules::notes::model::{NoteModel, NoteSaveModel, NoteUpdateModel};
 use crate::modules::notes::repository;
 use crate::modules::notes::schema::{CreateNoteSchema, FilterOptions, UpdateNoteSchema};
 use sqlx::{Error, PgPool};
@@ -95,6 +95,8 @@ pub async fn save_note_service(
     let existing_notes: Result<Vec<NoteModel>, Error> =
         repository::get_notes_by_title(pool, body_title).await;
 
+    let uuid_user = uuid::Uuid::parse_str("5160f79c-3d20-4107-9a5d-eb33e5c85152");
+
     let list_existing_note: Vec<NoteModel> = match existing_notes {
         Ok(notes) => notes.clone(),
         Err(err) => {
@@ -112,7 +114,15 @@ pub async fn save_note_service(
         return Err(error_message.parse().unwrap());
     }
 
-    match repository::save_note(pool, body).await {
+    let note_save_model = NoteSaveModel {
+        title: body.title.to_string(),
+        content: body.title.to_string(),
+        category: Option::from(body.category.as_ref().unwrap().to_string()),
+        published: Option::from(body.published.unwrap()),
+        created_by: Option::from(uuid_user.unwrap()),
+    };
+
+    match repository::save_note(pool, note_save_model.clone()).await {
         Ok(note) => Ok(note),
         Err(err) => {
             // Handle the error
@@ -147,8 +157,19 @@ pub async fn update_note_service(
         }
     };
 
+    let uuid_user = uuid::Uuid::parse_str("5160f79c-3d20-4107-9a5d-eb33e5c85152");
+
+    let note_update_model = NoteUpdateModel {
+        title: body.title.as_ref().unwrap().to_string(),
+        content: body.content.as_ref().unwrap().to_string(),
+        category: Option::from(body.category.as_ref().unwrap().to_string()),
+        published: Option::from(body.published.unwrap()),
+        updated_by: Option::from(uuid_user.unwrap()),
+    };
+    
     let note = existing_note;
-    match repository::update_note(pool, note_id, body, note).await {
+    
+    match repository::update_note(pool, note_id, note_update_model, note).await {
         Ok(note) => Ok(note),
         Err(err) => {
             // Handle the error
