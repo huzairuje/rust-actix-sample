@@ -8,7 +8,7 @@ use crate::{
     AppState,
 };
 use actix_web::http::StatusCode;
-use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
+use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, Responder};
 use validator::Validate;
 
 #[get("/health")]
@@ -61,63 +61,38 @@ pub async fn register_user_handler(
 
 #[get("/detail")]
 pub async fn get_user_detail_handler(
-    path: web::Path<String>,
     data: web::Data<AppState>,
+    req: HttpRequest,
 ) -> impl Responder {
-    let note_id_str = path.into_inner();
-
-    // Attempt to parse the UUID from the path
-    let user_id = match uuid::Uuid::parse_str(&note_id_str) {
-        Ok(uuid) => uuid,
-        Err(err) => {
-            eprintln!("match uuid::Uuid::parse_str, got err : {:?}", err);
-            let msg = constants::PARAMETER_NOTE_ID_INVALID;
-            let error_response: Response<(), ()> = Response::error(StatusCode::BAD_REQUEST, msg);
-            return HttpResponse::BadRequest().json(error_response);
-        }
-    };
-
-    let note_detail: UserModel = match service::get_user_detail_service(&data.db, user_id).await {
-        Ok(note) => note,
-        Err(err) => {
-            return if err.contains(constants::USER_NOT_FOUND) {
-                let resp: Response<(), ()> =
-                    Response::error(StatusCode::NOT_FOUND, constants::USER_NOT_FOUND);
-                HttpResponse::NotFound().json(resp)
-            } else {
-                let resp: Response<(), ()> = Response::error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    constants::DETAIL_USER_CANT_BE_FETCHED,
-                );
-                return HttpResponse::InternalServerError().json(resp);
+    let user_detail: UserResponse =
+        match service::get_user_detail_service(&data.db, data.cfg.clone(), req).await {
+            Ok(note) => note,
+            Err(err) => {
+                return if err.contains(constants::USER_NOT_FOUND) {
+                    let resp: Response<(), ()> =
+                        Response::error(StatusCode::NOT_FOUND, constants::USER_NOT_FOUND);
+                    HttpResponse::NotFound().json(resp)
+                } else {
+                    let resp: Response<(), ()> = Response::error(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        constants::DETAIL_USER_CANT_BE_FETCHED,
+                    );
+                    return HttpResponse::InternalServerError().json(resp);
+                }
             }
-        }
-    };
+        };
 
-    let resp: Response<UserModel, ()> =
-        Response::success(StatusCode::OK, note_detail, constants::USER_FOUND);
+    let resp: Response<UserResponse, ()> =
+        Response::success(StatusCode::OK, user_detail, constants::USER_FOUND);
     return HttpResponse::Ok().json(resp);
 }
 
 #[put("/detail")]
 pub async fn update_user_handler(
-    path: web::Path<String>,
     body: web::Json<UpdateUserRequest>,
     data: web::Data<AppState>,
+    request_http: HttpRequest,
 ) -> impl Responder {
-    let note_id_str = path.into_inner();
-
-    // Attempt to parse the UUID from the path
-    let user_id = match uuid::Uuid::parse_str(&note_id_str) {
-        Ok(uuid) => uuid,
-        Err(err) => {
-            eprintln!("match uuid::Uuid::parse_str, got err : {:?}", err);
-            let msg = constants::PARAMETER_NOTE_ID_INVALID;
-            let error_response: Response<(), ()> = Response::error(StatusCode::BAD_REQUEST, msg);
-            return HttpResponse::BadRequest().json(error_response);
-        }
-    };
-
     //validate the struct from body
     if let Err(errors) = body.validate() {
         let resp = Response::custom(
@@ -132,7 +107,7 @@ pub async fn update_user_handler(
     let req: &UpdateUserRequest = &body.0;
     //update the note
     let user_updated: Result<UserResponse, String> =
-        service::update_user_service(&data.db, user_id, req).await;
+        service::update_user_service(&data.db, data.cfg.clone(), req, request_http).await;
     let user = match user_updated {
         Ok(note) => note,
         Err(err) => {
@@ -159,11 +134,10 @@ pub async fn update_user_handler(
 
 #[delete("/deactivate")]
 pub async fn deactivate_user_handler(
-    path: web::Path<uuid::Uuid>,
     data: web::Data<AppState>,
+    req: HttpRequest,
 ) -> impl Responder {
-    let user_id = path.into_inner();
-    let delete_note = service::deactivate_user(&data.db, user_id).await;
+    let delete_note = service::deactivate_user_service(&data.db, data.cfg.clone(), req).await;
     match delete_note {
         Ok(_) => {}
         Err(err_delete_note) => {
@@ -181,5 +155,34 @@ pub async fn deactivate_user_handler(
 
     let msg = constants::USER_SUCCESS_DELETED;
     let resp: Response<(), ()> = Response::success(StatusCode::OK, (), msg);
+    return HttpResponse::Ok().json(resp);
+}
+
+#[get("/detail/{username}")]
+pub async fn get_user_detail_handler_by_username(
+    path: web::Path<String>,
+    data: web::Data<AppState>,
+) -> impl Responder {
+    let username = path.into_inner();
+    let user_detail: UserModel =
+        match service::get_user_by_username_service(&data.db, &username).await {
+            Ok(user) => user,
+            Err(err) => {
+                return if err.contains(constants::USER_NOT_FOUND) {
+                    let resp: Response<(), ()> =
+                        Response::error(StatusCode::NOT_FOUND, constants::USER_NOT_FOUND);
+                    HttpResponse::NotFound().json(resp)
+                } else {
+                    let resp: Response<(), ()> = Response::error(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        constants::DETAIL_USER_CANT_BE_FETCHED,
+                    );
+                    return HttpResponse::InternalServerError().json(resp);
+                }
+            }
+        };
+
+    let resp: Response<UserModel, ()> =
+        Response::success(StatusCode::OK, user_detail, constants::USER_FOUND);
     return HttpResponse::Ok().json(resp);
 }

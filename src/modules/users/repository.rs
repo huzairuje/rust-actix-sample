@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 pub async fn save_user(pool: &PgPool, request: &UserSaveModel) -> Result<UserModel, Error> {
     let query = "INSERT INTO users (username,password,fullname,email,phone_number) VALUES ($1, $2, $3, $4, $5) RETURNING *";
+    println!("{}", query);
     let query_result = sqlx::query_as::<_, UserModel>(&query)
         .bind(request.username.as_str())
         .bind(request.password.as_str())
@@ -26,6 +27,7 @@ pub async fn update_user(
 ) -> Result<UserModel, Error> {
     let now = Utc::now();
     let query = "UPDATE notes SET title = $1, content = $2, category = $3, published = $4, updated_at = $5 WHERE id = $6 RETURNING *";
+    println!("query : {}", query);
     let query_result = sqlx::query_as::<_, UserModel>(query)
         .bind(request.username.as_ref().unwrap_or(&user.username))
         .bind(request.password.as_ref().unwrap_or(&user.username))
@@ -55,46 +57,47 @@ pub async fn update_user(
 }
 
 pub async fn get_user_by_id(pool: &PgPool, user_id: Uuid) -> Result<UserModel, Error> {
-    return sqlx::query_as::<_, UserModel>(
-        "SELECT * FROM users u where u.deleted_at is null and u.id = $1",
-    )
-    .bind(user_id)
-    .fetch_one(pool)
-    .await;
+    let query = "SELECT * FROM users u where u.deleted_at is null and u.id = $1";
+    println!("query : {}, param: {}", query, user_id);
+    return sqlx::query_as::<_, UserModel>(query)
+        .bind(user_id)
+        .fetch_one(pool)
+        .await;
 }
 
 pub async fn get_user_by_username(
     pool: &PgPool,
     username: String,
 ) -> Result<Vec<UserModel>, Error> {
-    return sqlx::query_as::<_, UserModel>(
-        "SELECT * FROM users u where u.deleted_at is null and u.username = $1",
-    )
-    .bind(username)
-    .fetch_all(pool)
-    .await;
+    let query = "SELECT * FROM users u where u.deleted_at is null and u.username = $1";
+    println!("query : {}, param: {}", query, username);
+    return sqlx::query_as::<_, UserModel>(query)
+        .bind(username)
+        .fetch_all(pool)
+        .await;
 }
 
 pub async fn get_user_single_by_username(
     pool: &PgPool,
     username: String,
 ) -> Result<UserModel, Error> {
-    return sqlx::query_as::<_, UserModel>(
-        "SELECT * FROM users u where u.deleted_at is null and u.username = $1",
-    )
-    .bind(username)
-    .fetch_one(pool)
-    .await;
+    let query = "SELECT * FROM users u where u.deleted_at is null and u.username = $1";
+    println!("query : {}, param: {}", query, username);
+    return sqlx::query_as::<_, UserModel>(query)
+        .bind(username)
+        .fetch_one(pool)
+        .await;
 }
 
 pub async fn delete_user_by_id(pool: &PgPool, user_id: Uuid) -> Result<i32, Error> {
     let now: DateTime<Utc> = Utc::now();
-    let rows_affected: PgQueryResult =
-        sqlx::query::<_>("UPDATE users SET deleted_at = $1 WHERE id = $2")
-            .bind(now)
-            .bind(user_id)
-            .execute(pool)
-            .await?;
+    let query = "UPDATE users SET deleted_at = $1 WHERE id = $2";
+    println!("query : {}, param: {}", query, user_id);
+    let rows_affected: PgQueryResult = sqlx::query::<_>(query)
+        .bind(now)
+        .bind(user_id)
+        .execute(pool)
+        .await?;
 
     Ok(rows_affected.rows_affected() as i32)
 }

@@ -4,6 +4,7 @@ mod infrastructure;
 mod middleware;
 mod modules;
 mod routes;
+mod utils;
 
 use actix_web::http::StatusCode;
 use actix_web::middleware::Logger;

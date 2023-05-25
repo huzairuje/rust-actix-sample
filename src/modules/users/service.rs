@@ -1,15 +1,17 @@
+use crate::configuration::config::Config;
 use crate::infrastructure::password;
 use crate::modules::auth::constants as auth_constants;
 use crate::modules::users::constants as user_constants;
 use crate::modules::users::model::{UserModel, UserSaveModel, UserUpdateModel};
 use crate::modules::users::repository;
 use crate::modules::users::schema::{CreateUserRequest, UpdateUserRequest, UserResponse};
+use crate::utils::utils;
+use actix_web::HttpRequest;
 use sqlx::{Error, PgPool};
+use uuid::Uuid;
 
-pub async fn get_user_detail_service(
-    pool: &PgPool,
-    user_id: uuid::Uuid,
-) -> Result<UserModel, String> {
+#[allow(dead_code)]
+pub async fn get_user_by_id_service(pool: &PgPool, user_id: Uuid) -> Result<UserModel, String> {
     match repository::get_user_by_id(pool, user_id).await {
         Ok(note) => Ok(note),
         Err(err) => {
@@ -23,6 +25,44 @@ pub async fn get_user_detail_service(
                 _ => {
                     // Handle the error
                     eprintln!("error get detail notes {:?}", err);
+                    let error_message = user_constants::DETAIL_USER_CANT_BE_FETCHED;
+                    Err(error_message.parse().unwrap())
+                }
+            }
+        }
+    }
+}
+
+pub async fn get_user_detail_service(
+    pool: &PgPool,
+    config: Config,
+    req: HttpRequest,
+) -> Result<UserResponse, String> {
+    let user_id = utils::get_current_user_uuid_from_jwt(&config.clone(), req);
+    let user_data =
+        repository::get_user_by_id(pool, *user_id.as_ref().unwrap_or(&Uuid::nil())).await;
+    match user_data {
+        Ok(user) => Ok(UserResponse {
+            id: user.id,
+            username: user.username,
+            fullname: user.fullname,
+            email: user.email,
+            phone_number: user.phone_number,
+            created_at: user.created_at,
+            updated_at: user.updated_at,
+            deleted_at: user.deleted_at,
+        }),
+        Err(err) => {
+            match err {
+                Error::RowNotFound => {
+                    // Handle the error
+                    eprintln!("error get detail user {:?}", err);
+                    let error_message = user_constants::USER_NOT_FOUND;
+                    Err(error_message.parse().unwrap())
+                }
+                _ => {
+                    // Handle the error
+                    eprintln!("error get detail user {:?}", err);
                     let error_message = user_constants::DETAIL_USER_CANT_BE_FETCHED;
                     Err(error_message.parse().unwrap())
                 }
@@ -119,10 +159,13 @@ pub async fn register_user_service(
 
 pub async fn update_user_service(
     pool: &PgPool,
-    user_id: uuid::Uuid,
+    config: Config,
     body: &UpdateUserRequest,
+    req: HttpRequest,
 ) -> Result<UserResponse, String> {
-    let user_exist: Result<UserModel, Error> = repository::get_user_by_id(pool, user_id).await;
+    let user_id = utils::get_current_user_uuid_from_jwt(&config.clone(), req);
+    let user_exist: Result<UserModel, Error> =
+        repository::get_user_by_id(pool, *user_id.as_ref().unwrap_or(&Uuid::nil())).await;
     let existing_user: UserModel = match user_exist {
         Ok(user) => user.clone(),
         Err(err) => {
@@ -160,7 +203,13 @@ pub async fn update_user_service(
     };
 
     let user = existing_user;
-    let user_update = repository::update_user(pool, user_id, &user_update, user).await;
+    let user_update = repository::update_user(
+        pool,
+        *user_id.as_ref().unwrap_or(&Uuid::nil()),
+        &user_update,
+        user,
+    )
+    .await;
     let user_response = match user_update {
         Ok(user) => UserResponse {
             id: user.id,
@@ -183,8 +232,14 @@ pub async fn update_user_service(
     Ok(user_response)
 }
 
-pub async fn deactivate_user(pool: &PgPool, user_id: uuid::Uuid) -> Result<i32, String> {
-    let note_exist: Result<UserModel, Error> = repository::get_user_by_id(pool, user_id).await;
+pub async fn deactivate_user_service(
+    pool: &PgPool,
+    config: Config,
+    req: HttpRequest,
+) -> Result<i32, String> {
+    let user_id = utils::get_current_user_uuid_from_jwt(&config.clone(), req);
+    let note_exist: Result<UserModel, Error> =
+        repository::get_user_by_id(pool, *user_id.as_ref().unwrap_or(&Uuid::nil())).await;
     match note_exist {
         Ok(notes) => notes.clone(),
         Err(err) => {
@@ -203,7 +258,7 @@ pub async fn deactivate_user(pool: &PgPool, user_id: uuid::Uuid) -> Result<i32, 
         }
     };
 
-    match repository::delete_user_by_id(pool, user_id).await {
+    match repository::delete_user_by_id(pool, *user_id.as_ref().unwrap_or(&Uuid::nil())).await {
         Ok(note) => Ok(note),
         Err(err) => {
             // Handle the error

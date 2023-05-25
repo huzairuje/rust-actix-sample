@@ -6,6 +6,7 @@ use crate::modules::auth::schema::LoginRequest;
 use crate::modules::users::constants as user_constants;
 use crate::modules::users::model::UserModel;
 use crate::modules::users::service as user_service;
+use actix_web::HttpRequest;
 use bcrypt::BcryptResult;
 use sqlx::PgPool;
 
@@ -81,6 +82,49 @@ pub async fn login_service(
     Ok(AuthModel {
         access_token,
         refresh_token,
-        status: None,
+    })
+}
+
+pub async fn refresh_token_service(
+    pool: &PgPool,
+    config: Config,
+    req: HttpRequest,
+) -> Result<AuthModel, String> {
+    let user_data = user_service::get_user_detail_service(pool, config.clone(), req).await;
+    if let Err(err) = user_data {
+        eprintln!(
+            "get user data from authorization header, got error : {}",
+            err
+        );
+        return Err(err);
+    }
+
+    // implement new jwt here and return the access token and refresh token value
+    let jwt_manager = match Manager::new(&config.clone()) {
+        Ok(manager) => manager,
+        Err(err) => {
+            eprintln!("Failed to create JWT manager: {:?}", err);
+            return Err("Failed to create JWT manager".to_string());
+        }
+    };
+    let access_token = match jwt_manager.new_jwt(&user_data.as_ref().unwrap().id.to_string()) {
+        Ok(token) => token,
+        Err(err) => {
+            eprintln!("Failed to create access token: {:?}", err);
+            return Err("Failed to create access token".to_string());
+        }
+    };
+    let refresh_token =
+        match jwt_manager.new_refresh_token(&user_data.as_ref().unwrap().id.to_string()) {
+            Ok(token) => token,
+            Err(err) => {
+                eprintln!("Failed to create refresh token: {:?}", err);
+                return Err("Failed to create refresh token".to_string());
+            }
+        };
+
+    Ok(AuthModel {
+        access_token,
+        refresh_token,
     })
 }

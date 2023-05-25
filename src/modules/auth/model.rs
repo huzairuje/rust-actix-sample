@@ -5,5 +5,4 @@ use serde::{Deserialize, Serialize};
 pub struct AuthModel {
     pub access_token: String,
     pub refresh_token: String,
-    pub status: Option<String>
 }

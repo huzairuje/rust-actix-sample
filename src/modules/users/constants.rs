@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 pub const PARAMETER_NOTE_ID_INVALID: &str = "parameter id is invalid";
 pub const USER_NOT_FOUND: &str = "user not found";
 pub const USER_FOUND: &str = "success get data user";

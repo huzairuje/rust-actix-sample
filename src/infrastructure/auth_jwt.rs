@@ -13,9 +13,9 @@ pub struct Manager {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Claims {
-    sub: String,
-    exp: usize,
+pub struct Claims {
+    pub sub: String,
+    pub exp: usize,
 }
 
 impl Manager {
@@ -28,8 +28,7 @@ impl Manager {
             return Err("empty signing key".into());
         }
 
-        let mut token_expiry: Duration = Duration::from_secs(5 * 3600); // Initialize with default value
-
+        let mut token_expiry: Duration = Duration::from_secs(10 * 3600); // Initialize with default value
         if !cfg.access_token_expiry.is_none() && !cfg.access_token_expiry_unit.is_none() {
             token_expiry = match cfg.access_token_expiry_unit.as_ref().unwrap().as_str() {
                 "minutes" => {
@@ -41,7 +40,7 @@ impl Manager {
                 "days" => {
                     Duration::from_secs((cfg.access_token_expiry.as_ref().unwrap() * 86400) as u64)
                 }
-                _ => Duration::from_secs(5 * 3600),
+                _ => Duration::from_secs(10 * 3600),
             };
         }
 
@@ -62,28 +61,24 @@ impl Manager {
             "days" => now + self.token_expiry.as_secs() as i64 / 86400,
             _ => now + 5 * 3600,
         };
-
         let claims = Claims {
             sub: user_id.to_owned(),
             exp: expiry as usize,
         };
 
         let token = encode(&Header::new(Algorithm::HS256), &claims, &self.signing_key)?;
-
         Ok(token)
     }
 
     pub fn new_refresh_token(&self, user_id: &str) -> Result<String, Box<dyn Error>> {
         let now = Utc::now().timestamp();
         let expiry = now + ChronoDuration::weeks(52).num_seconds();
-
         let claims = Claims {
             sub: user_id.to_owned(),
             exp: expiry as usize,
         };
 
         let token = encode(&Header::new(Algorithm::HS256), &claims, &self.signing_key)?;
-
         Ok(token)
     }
 }
