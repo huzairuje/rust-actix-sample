@@ -155,9 +155,9 @@ pub async fn register_user_service(
     let new_user = UserSaveModel {
         username: body.username.to_string(),
         password: hashed_password,
-        fullname: Option::from(body.fullname.as_ref().unwrap().to_string()),
-        email: Option::from(body.email.as_ref().unwrap().to_string()),
-        phone_number: Option::from(body.phone_number.as_ref().unwrap().to_string()),
+        fullname: body.fullname.as_ref().map(|c| c.to_string()),
+        email: body.email.as_ref().map(|c| c.to_string()),
+        phone_number: body.phone_number.as_ref().map(|c| c.to_string()),
     };
 
     let user_save = repository::save_user(pool, &new_user).await;
@@ -218,11 +218,11 @@ pub async fn update_user_service(
     }
 
     let user_update = UserUpdateModel {
-        username: Option::from(body.username.as_ref().unwrap().to_string()),
+        username: body.username.as_ref().map(|c| c.to_string()),
         password: Option::from(hashed_password),
-        fullname: Option::from(body.fullname.as_ref().unwrap().to_string()),
-        email: Option::from(body.email.as_ref().unwrap().to_string()),
-        phone_number: Option::from(body.phone_number.as_ref().unwrap().to_string()),
+        fullname: body.fullname.as_ref().map(|c| c.to_string()),
+        email: body.email.as_ref().map(|c| c.to_string()),
+        phone_number: body.phone_number.as_ref().map(|c| c.to_string()),
     };
 
     let user = existing_user;
