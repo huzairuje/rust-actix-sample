@@ -4,6 +4,7 @@ use sqlx::postgres::PgQueryResult;
 use sqlx::{Error, PgPool};
 use uuid::Uuid;
 
+#[allow(dead_code)]
 pub async fn get_notes(
     pool: &PgPool,
     limit: i32,
@@ -20,6 +21,30 @@ pub async fn get_notes(
     let query_result = sqlx::query_as::<_, NoteModel>(&query_with_order)
         .bind(limit)
         .bind(offset)
+        .fetch_all(pool)
+        .await;
+
+    query_result
+}
+
+pub async fn get_notes_user(
+    pool: &PgPool,
+    limit: i32,
+    offset: i32,
+    query: String,
+    query_order: String,
+    user_id: Uuid,
+) -> Result<Vec<NoteModel>, Error> {
+    //build all the query
+    let query_with_order = format!(
+        "SELECT * FROM notes WHERE deleted_at IS NULL AND created_by = $3 {} {} LIMIT $1 OFFSET $2",
+        query, query_order
+    );
+
+    let query_result = sqlx::query_as::<_, NoteModel>(&query_with_order)
+        .bind(limit)
+        .bind(offset)
+        .bind(user_id)
         .fetch_all(pool)
         .await;
 
@@ -63,6 +88,7 @@ pub async fn update_note(
     query_result
 }
 
+#[allow(dead_code)]
 pub async fn get_note_by_id(pool: &PgPool, note_id: Uuid) -> Result<NoteModel, Error> {
     return sqlx::query_as::<_, NoteModel>(
         "SELECT * FROM notes n where n.deleted_at is null and n.id = $1",
@@ -72,21 +98,67 @@ pub async fn get_note_by_id(pool: &PgPool, note_id: Uuid) -> Result<NoteModel, E
     .await;
 }
 
-pub async fn get_notes_by_title(pool: &PgPool, title: String) -> Result<Vec<NoteModel>, Error> {
+pub async fn get_note_user_by_id(
+    pool: &PgPool,
+    note_id: Uuid,
+    user_id: Uuid,
+) -> Result<NoteModel, Error> {
     return sqlx::query_as::<_, NoteModel>(
-        "SELECT * FROM notes n where n.deleted_at is not null and n.title ILIKE $1",
+        "SELECT * FROM notes n where n.deleted_at is null and n.id = $1 and n.created_by = $2",
     )
-    .bind(title)
-    .fetch_all(pool)
+    .bind(note_id)
+    .bind(user_id)
+    .fetch_one(pool)
     .await;
 }
 
+pub async fn get_notes_by_title(pool: &PgPool, title: String) -> Result<Vec<NoteModel>, Error> {
+    let query = "SELECT * FROM notes where deleted_at is null and title = $1";
+    println!("query {:?} param {:?}", query, title);
+    return sqlx::query_as::<_, NoteModel>(query)
+        .bind(title)
+        .fetch_all(pool)
+        .await;
+}
+#[allow(dead_code)]
+pub async fn get_notes_user_by_title(
+    pool: &PgPool,
+    title: String,
+    user_id: Uuid,
+) -> Result<Vec<NoteModel>, Error> {
+    return sqlx::query_as::<_, NoteModel>(
+        "SELECT * FROM notes n where n.deleted_at is not null and n.title = $1 and n.created_by = $2",
+    )
+        .bind(title)
+        .bind(user_id)
+        .fetch_all(pool)
+        .await;
+}
+
+#[allow(dead_code)]
 pub async fn delete_note_by_id(pool: &PgPool, note_id: Uuid) -> Result<i32, Error> {
     let now: DateTime<Utc> = Utc::now();
     let rows_affected: PgQueryResult =
         sqlx::query::<_>("UPDATE notes SET deleted_at = $1 WHERE id = $2")
             .bind(now)
             .bind(note_id)
+            .execute(pool)
+            .await?;
+
+    Ok(rows_affected.rows_affected() as i32)
+}
+
+pub async fn delete_note_user_by_id(
+    pool: &PgPool,
+    note_id: Uuid,
+    user_id: Uuid,
+) -> Result<i32, Error> {
+    let now: DateTime<Utc> = Utc::now();
+    let rows_affected: PgQueryResult =
+        sqlx::query::<_>("UPDATE notes SET deleted_at = $1 WHERE id = $2 AND created_by = $3")
+            .bind(now)
+            .bind(note_id)
+            .bind(user_id)
             .execute(pool)
             .await?;
 

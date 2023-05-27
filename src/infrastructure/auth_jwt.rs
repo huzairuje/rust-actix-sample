@@ -9,7 +9,6 @@ use std::time::Duration;
 pub struct Manager {
     signing_key: EncodingKey,
     token_expiry: Duration,
-    token_expiry_unit: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -45,27 +44,19 @@ impl Manager {
         }
 
         let signing_key = EncodingKey::from_secret(cfg.jwt_secret_key.as_ref().unwrap().as_bytes());
-
         Ok(Manager {
             signing_key,
             token_expiry,
-            token_expiry_unit: cfg.access_token_expiry_unit.as_ref().unwrap().clone(),
         })
     }
 
     pub fn new_jwt(&self, user_id: &str) -> Result<String, Box<dyn Error>> {
         let now = Utc::now().timestamp();
-        let expiry = match self.token_expiry_unit.as_str() {
-            "minutes" => now + self.token_expiry.as_secs() as i64 / 60,
-            "hours" => now + self.token_expiry.as_secs() as i64 / 3600,
-            "days" => now + self.token_expiry.as_secs() as i64 / 86400,
-            _ => now + 5 * 3600,
-        };
+        let expiry = now + self.token_expiry.as_secs() as i64;
         let claims = Claims {
             sub: user_id.to_owned(),
             exp: expiry as usize,
         };
-
         let token = encode(&Header::new(Algorithm::HS256), &claims, &self.signing_key)?;
         Ok(token)
     }

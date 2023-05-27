@@ -36,7 +36,10 @@ pub struct UpdateNoteSchema {
     pub title: Option<String>,
     #[validate(length(min = 1))]
     pub content: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(custom = "validate_category")]
     pub category: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub published: Option<bool>,
 }
 

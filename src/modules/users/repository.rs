@@ -21,7 +21,7 @@ pub async fn save_user(pool: &PgPool, request: &UserSaveModel) -> Result<UserMod
 
 pub async fn update_user(
     pool: &PgPool,
-    note_id: Uuid,
+    user_id: Uuid,
     request: &UserUpdateModel,
     user: UserModel,
 ) -> Result<UserModel, Error> {
@@ -50,7 +50,7 @@ pub async fn update_user(
                 .unwrap_or(&user.phone_number.as_ref().unwrap()),
         )
         .bind(now)
-        .bind(note_id)
+        .bind(user_id)
         .fetch_one(pool)
         .await;
     query_result

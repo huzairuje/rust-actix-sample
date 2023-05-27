@@ -1,5 +1,6 @@
 use crate::infrastructure::http_lib::Response;
 use crate::modules::notes::constants;
+use crate::utils::utils;
 use crate::{
     modules::notes::model::NoteModel,
     modules::notes::schema::{CreateNoteSchema, FilterOptions, UpdateNoteSchema},
@@ -7,7 +8,7 @@ use crate::{
     AppState,
 };
 use actix_web::http::StatusCode;
-use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
+use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, Responder};
 use validator::Validate;
 
 #[get("/health")]
@@ -21,10 +22,17 @@ pub async fn health_checker_handler() -> impl Responder {
 pub async fn note_list_handler(
     filter: web::Query<FilterOptions>,
     data: web::Data<AppState>,
+    req: HttpRequest,
 ) -> impl Responder {
+    //get user_id from authorization token
+    let user_id = utils::get_current_user_uuid_from_jwt(&data.cfg.clone(), req);
+    if let Err(err) = user_id {
+        let resp: Response<(), ()> = Response::error(StatusCode::UNAUTHORIZED, err.as_str());
+        return HttpResponse::Unauthorized().json(resp);
+    }
     //get list note
     let notes: Result<Vec<NoteModel>, String> =
-        service::get_notes_service(&data.db, &filter.into_inner()).await;
+        service::get_notes_service(&data.db, &filter.into_inner(), user_id.unwrap()).await;
     if let Err(err) = notes {
         let resp: Response<(), ()> =
             Response::error(StatusCode::INTERNAL_SERVER_ERROR, err.as_str());
@@ -49,7 +57,15 @@ pub async fn note_list_handler(
 pub async fn create_note_handler(
     body: web::Json<CreateNoteSchema>,
     data: web::Data<AppState>,
+    req: HttpRequest,
 ) -> impl Responder {
+    //get user_id from authorization token
+    let user_id = utils::get_current_user_uuid_from_jwt(&data.cfg.clone(), req);
+    if let Err(err) = user_id {
+        let resp: Response<(), ()> = Response::error(StatusCode::UNAUTHORIZED, err.as_str());
+        return HttpResponse::Unauthorized().json(resp);
+    }
+
     //validate the struct from body
     if let Err(errors) = body.validate() {
         let resp = Response::custom(
@@ -64,7 +80,8 @@ pub async fn create_note_handler(
     let req: &CreateNoteSchema = &body.0;
 
     // save the notes
-    let result_note: Result<NoteModel, String> = service::save_note_service(&data.db, req).await;
+    let result_note: Result<NoteModel, String> =
+        service::save_note_service(&data.db, req, user_id.unwrap()).await;
     let note = match result_note {
         Ok(note) => note,
         Err(err) => {
@@ -91,8 +108,16 @@ pub async fn create_note_handler(
 pub async fn get_note_handler(
     path: web::Path<String>,
     data: web::Data<AppState>,
+    req: HttpRequest,
 ) -> impl Responder {
     let note_id_str = path.into_inner();
+
+    //get user_id from authorization token
+    let user_id = utils::get_current_user_uuid_from_jwt(&data.cfg.clone(), req);
+    if let Err(err) = user_id {
+        let resp: Response<(), ()> = Response::error(StatusCode::UNAUTHORIZED, err.as_str());
+        return HttpResponse::Unauthorized().json(resp);
+    }
 
     // Attempt to parse the UUID from the path
     let note_id = match uuid::Uuid::parse_str(&note_id_str) {
@@ -105,22 +130,23 @@ pub async fn get_note_handler(
         }
     };
 
-    let note_detail: NoteModel = match service::get_note_detail_service(&data.db, note_id).await {
-        Ok(note) => note,
-        Err(err) => {
-            return if err.contains(constants::NOTE_NOT_FOUND) {
-                let resp: Response<(), ()> =
-                    Response::error(StatusCode::NOT_FOUND, constants::NOTE_NOT_FOUND);
-                HttpResponse::NotFound().json(resp)
-            } else {
-                let resp: Response<(), ()> = Response::error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    constants::DETAIL_NOTE_CANT_BE_FETCHED,
-                );
-                return HttpResponse::InternalServerError().json(resp);
+    let note_detail: NoteModel =
+        match service::get_note_detail_service(&data.db, note_id, user_id.unwrap()).await {
+            Ok(note) => note,
+            Err(err) => {
+                return if err.contains(constants::NOTE_NOT_FOUND) {
+                    let resp: Response<(), ()> =
+                        Response::error(StatusCode::NOT_FOUND, constants::NOTE_NOT_FOUND);
+                    HttpResponse::NotFound().json(resp)
+                } else {
+                    let resp: Response<(), ()> = Response::error(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        constants::DETAIL_NOTE_CANT_BE_FETCHED,
+                    );
+                    return HttpResponse::InternalServerError().json(resp);
+                }
             }
-        }
-    };
+        };
 
     let resp: Response<NoteModel, ()> =
         Response::success(StatusCode::OK, note_detail, constants::NOTE_FOUND);
@@ -132,8 +158,16 @@ pub async fn edit_note_handler(
     path: web::Path<String>,
     body: web::Json<UpdateNoteSchema>,
     data: web::Data<AppState>,
+    req: HttpRequest,
 ) -> impl Responder {
     let note_id_str = path.into_inner();
+
+    //get user_id from authorization token
+    let user_id = utils::get_current_user_uuid_from_jwt(&data.cfg.clone(), req);
+    if let Err(err) = user_id {
+        let resp: Response<(), ()> = Response::error(StatusCode::UNAUTHORIZED, err.as_str());
+        return HttpResponse::Unauthorized().json(resp);
+    }
 
     // Attempt to parse the UUID from the path
     let note_id = match uuid::Uuid::parse_str(&note_id_str) {
@@ -160,7 +194,7 @@ pub async fn edit_note_handler(
     let req: &UpdateNoteSchema = &body.0;
     //update the note
     let note_updated: Result<NoteModel, String> =
-        service::update_note_service(&data.db, note_id, req).await;
+        service::update_note_service(&data.db, note_id, req, user_id.unwrap()).await;
     let note = match note_updated {
         Ok(note) => note,
         Err(err) => {
@@ -191,9 +225,18 @@ pub async fn edit_note_handler(
 pub async fn delete_note_handler(
     path: web::Path<uuid::Uuid>,
     data: web::Data<AppState>,
+    req: HttpRequest,
 ) -> impl Responder {
     let note_id = path.into_inner();
-    let delete_note = service::delete_note_service(&data.db, note_id).await;
+
+    //get user_id from authorization token
+    let user_id = utils::get_current_user_uuid_from_jwt(&data.cfg.clone(), req);
+    if let Err(err) = user_id {
+        let resp: Response<(), ()> = Response::error(StatusCode::UNAUTHORIZED, err.as_str());
+        return HttpResponse::Unauthorized().json(resp);
+    }
+
+    let delete_note = service::delete_note_service(&data.db, note_id, user_id.unwrap()).await;
     match delete_note {
         Ok(_) => {}
         Err(err_delete_note) => {

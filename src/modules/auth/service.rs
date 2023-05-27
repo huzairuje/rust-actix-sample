@@ -6,9 +6,9 @@ use crate::modules::auth::schema::LoginRequest;
 use crate::modules::users::constants as user_constants;
 use crate::modules::users::model::UserModel;
 use crate::modules::users::service as user_service;
-use actix_web::HttpRequest;
 use bcrypt::BcryptResult;
 use sqlx::PgPool;
+use uuid::Uuid;
 
 pub async fn login_service(
     pool: &PgPool,
@@ -88,9 +88,9 @@ pub async fn login_service(
 pub async fn refresh_token_service(
     pool: &PgPool,
     config: Config,
-    req: HttpRequest,
+    user_id: Uuid,
 ) -> Result<AuthModel, String> {
-    let user_data = user_service::get_user_detail_service(pool, config.clone(), req).await;
+    let user_data = user_service::get_user_detail_service(pool, user_id).await;
     if let Err(err) = user_data {
         eprintln!(
             "get user data from authorization header, got error : {}",

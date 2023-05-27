@@ -1,8 +1,8 @@
 use crate::infrastructure::http_lib::Response;
 use crate::modules::users::constants;
 use crate::modules::users::schema::UserResponse;
+use crate::utils::utils;
 use crate::{
-    modules::users::model::UserModel,
     modules::users::schema::{CreateUserRequest, UpdateUserRequest},
     modules::users::service,
     AppState,
@@ -64,8 +64,13 @@ pub async fn get_user_detail_handler(
     data: web::Data<AppState>,
     req: HttpRequest,
 ) -> impl Responder {
+    let user_id = utils::get_current_user_uuid_from_jwt(&data.cfg.clone(), req);
+    if let Err(err) = user_id {
+        let resp: Response<(), ()> = Response::error(StatusCode::UNAUTHORIZED, err.as_str());
+        return HttpResponse::Unauthorized().json(resp);
+    }
     let user_detail: UserResponse =
-        match service::get_user_detail_service(&data.db, data.cfg.clone(), req).await {
+        match service::get_user_detail_service(&data.db, user_id.unwrap()).await {
             Ok(note) => note,
             Err(err) => {
                 return if err.contains(constants::USER_NOT_FOUND) {
@@ -93,6 +98,13 @@ pub async fn update_user_handler(
     data: web::Data<AppState>,
     request_http: HttpRequest,
 ) -> impl Responder {
+    //get user_id from authorization header
+    let user_id = utils::get_current_user_uuid_from_jwt(&data.cfg.clone(), request_http);
+    if let Err(err) = user_id {
+        let resp: Response<(), ()> = Response::error(StatusCode::UNAUTHORIZED, err.as_str());
+        return HttpResponse::Unauthorized().json(resp);
+    }
+
     //validate the struct from body
     if let Err(errors) = body.validate() {
         let resp = Response::custom(
@@ -107,7 +119,7 @@ pub async fn update_user_handler(
     let req: &UpdateUserRequest = &body.0;
     //update the note
     let user_updated: Result<UserResponse, String> =
-        service::update_user_service(&data.db, data.cfg.clone(), req, request_http).await;
+        service::update_user_service(&data.db, req, user_id.unwrap()).await;
     let user = match user_updated {
         Ok(note) => note,
         Err(err) => {
@@ -137,8 +149,14 @@ pub async fn deactivate_user_handler(
     data: web::Data<AppState>,
     req: HttpRequest,
 ) -> impl Responder {
-    let delete_note = service::deactivate_user_service(&data.db, data.cfg.clone(), req).await;
-    match delete_note {
+    //get user_id from authorization header
+    let user_id = utils::get_current_user_uuid_from_jwt(&data.cfg.clone(), req);
+    if let Err(err) = user_id {
+        let resp: Response<(), ()> = Response::error(StatusCode::UNAUTHORIZED, err.as_str());
+        return HttpResponse::Unauthorized().json(resp);
+    }
+    let delete_user = service::deactivate_user_service(&data.db, user_id.unwrap()).await;
+    match delete_user {
         Ok(_) => {}
         Err(err_delete_note) => {
             return if err_delete_note.contains(&constants::USER_NOT_FOUND) {
@@ -162,10 +180,17 @@ pub async fn deactivate_user_handler(
 pub async fn get_user_detail_handler_by_username(
     path: web::Path<String>,
     data: web::Data<AppState>,
+    req: HttpRequest,
 ) -> impl Responder {
+    //get user_id from authorization header
+    let user_id = utils::get_current_user_uuid_from_jwt(&data.cfg.clone(), req);
+    if let Err(err) = user_id {
+        let resp: Response<(), ()> = Response::error(StatusCode::UNAUTHORIZED, err.as_str());
+        return HttpResponse::Unauthorized().json(resp);
+    }
     let username = path.into_inner();
-    let user_detail: UserModel =
-        match service::get_user_by_username_service(&data.db, &username).await {
+    let user_detail: UserResponse =
+        match service::get_user_by_username_with_user_response(&data.db, &username).await {
             Ok(user) => user,
             Err(err) => {
                 return if err.contains(constants::USER_NOT_FOUND) {
@@ -182,7 +207,7 @@ pub async fn get_user_detail_handler_by_username(
             }
         };
 
-    let resp: Response<UserModel, ()> =
+    let resp: Response<UserResponse, ()> =
         Response::success(StatusCode::OK, user_detail, constants::USER_FOUND);
     return HttpResponse::Ok().json(resp);
 }

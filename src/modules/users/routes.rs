@@ -7,7 +7,8 @@ pub fn routes(conf: &mut web::ServiceConfig) {
         .service(handler::register_user_handler)
         .service(handler::get_user_detail_handler)
         .service(handler::update_user_handler)
-        .service(handler::deactivate_user_handler);
+        .service(handler::deactivate_user_handler)
+        .service(handler::get_user_detail_handler_by_username);
 
     conf.service(scope);
 }
