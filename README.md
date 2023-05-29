@@ -1,4 +1,4 @@
-# Rust - Sample API notes
+# Rust - Sample API notes with user authentication
 
 ## Prerequisite
 1. rust build nightly using rustup chain command.
@@ -20,19 +20,10 @@
     ```
     or use this command
     ```shell
-      cargo add actix-web
-        cargo add actix-cors
-        cargo add serde_json
-        cargo add serde --features derive
-        cargo add chrono --features serde
-        cargo add env_logger
-        cargo add dotenv
-        cargo add uuid --features "serde v4"
-        cargo add sqlx --features "runtime-async-std-native-tls postgres chrono uuid"
-        # HotReload
-        cargo install cargo-watch
-        # SQLX-CLI
-        cargo install sqlx-cli
+     # HotReload
+      cargo install cargo-watch
+     # SQLX-CLI
+      cargo install sqlx-cli
     ```
 2. make `.env` file on the root project folder
 3. setup the env like database, etc.
