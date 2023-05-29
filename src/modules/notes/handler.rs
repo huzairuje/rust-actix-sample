@@ -1,4 +1,5 @@
-use crate::infrastructure::http_lib::Response;
+use crate::infrastructure::http_lib::{Pagination, Response};
+use crate::infrastructure::pagination::PaginationQuery;
 use crate::modules::notes::constants;
 use crate::utils::utils;
 use crate::{
@@ -23,6 +24,7 @@ pub async fn note_list_handler(
     filter: web::Query<FilterOptions>,
     data: web::Data<AppState>,
     req: HttpRequest,
+    paginated: web::Query<PaginationQuery>,
 ) -> impl Responder {
     //get user_id from authorization token
     let user_id = utils::get_current_user_uuid_from_jwt(&data.cfg.clone(), req);
@@ -31,7 +33,7 @@ pub async fn note_list_handler(
         return HttpResponse::Unauthorized().json(resp);
     }
     //get list note
-    let notes: Result<Vec<NoteModel>, String> =
+    let (notes, total_count) =
         service::get_notes_service(&data.db, &filter.into_inner(), user_id.unwrap()).await;
     if let Err(err) = notes {
         let resp: Response<(), ()> =
@@ -49,7 +51,8 @@ pub async fn note_list_handler(
         Vec::new() // Fallback value
     });
     let msg = constants::NOTE_FOUND;
-    let resp: Response<Vec<NoteModel>, ()> = Response::success(StatusCode::OK, list_notes, msg);
+    let pg: PaginationQuery = paginated.0;
+    let resp: Pagination<Vec<NoteModel>> = Pagination::success(pg, msg, list_notes, total_count);
     return HttpResponse::Ok().json(resp);
 }
 

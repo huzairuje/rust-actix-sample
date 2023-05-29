@@ -9,7 +9,7 @@ pub async fn get_notes_service(
     pool: &PgPool,
     filter: &FilterOptions,
     user_id: Uuid,
-) -> Result<Vec<NoteModel>, String> {
+) -> (Result<Vec<NoteModel>, String>, u16) {
     //unwrap the filter value
     let filter_option: &FilterOptions = filter;
     let limit = filter_option.limit.unwrap_or(10);
@@ -54,13 +54,13 @@ pub async fn get_notes_service(
         pool,
         limit as i32,
         offset as i32,
-        query,
+        query.clone(),
         query_order,
         user_id,
     )
     .await;
 
-    match result_note {
+    let notes = match result_note {
         Ok(notes) => Ok(notes),
         Err(err) => {
             // Handle the error
@@ -68,7 +68,17 @@ pub async fn get_notes_service(
             let error_message = constants::NOTE_CANT_BE_FETCHED;
             Err(error_message.parse().unwrap())
         }
-    }
+    };
+
+    let result_note_total_count =
+        repository::get_notes_count_user(pool, query.clone(), user_id).await;
+
+    let total_count_note = match result_note_total_count {
+        Ok(total_count_note) => total_count_note,
+        _ => 0,
+    };
+
+    (notes, total_count_note as u16)
 }
 
 pub async fn get_note_detail_service(
