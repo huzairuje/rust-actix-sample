@@ -55,20 +55,19 @@ pub async fn get_notes_count_user(
     pool: &PgPool,
     query_filter: String,
     user_id: Uuid,
-) -> Result<i32, Error> {
+) -> Result<i64, Error> {
     // Build the query with placeholders for parameters
     let final_query = format!(
         "SELECT count(id) FROM notes WHERE deleted_at IS NULL AND created_by = $1 {}",
         query_filter
     );
 
-    let query_result: Result<(i32,), Error> = sqlx::query_scalar(&final_query)
+    let query_result: Result<i64, Error> = sqlx::query_scalar(&final_query)
         .bind(user_id)
         .fetch_one(pool)
         .await;
 
-    // Extract the count from the query result
-    query_result.map(|count| count.0)
+    query_result
 }
 
 pub async fn save_note(pool: &PgPool, body: NoteSaveModel) -> Result<NoteModel, Error> {

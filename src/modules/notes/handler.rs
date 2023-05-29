@@ -50,6 +50,7 @@ pub async fn note_list_handler(
         HttpResponse::InternalServerError().json(resp);
         Vec::new() // Fallback value
     });
+
     let msg = constants::NOTE_FOUND;
     let pg: PaginationQuery = paginated.0;
     let resp: Pagination<Vec<NoteModel>> = Pagination::success(pg, msg, list_notes, total_count);
