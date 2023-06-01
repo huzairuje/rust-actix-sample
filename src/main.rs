@@ -22,7 +22,7 @@ pub struct AppState {
 
 async fn not_found() -> HttpResponse {
     let response: Response<(), ()> = Response::error(StatusCode::NOT_FOUND, "Not Found Routes");
-    HttpResponse::NotFound().json(response)
+    return HttpResponse::NotFound().json(response);
 }
 
 #[actix_web::main]
