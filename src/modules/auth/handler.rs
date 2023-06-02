@@ -77,10 +77,8 @@ pub async fn refresh_token_handler(data: web::Data<AppState>, req: HttpRequest) 
         Ok(auth) => auth,
         Err(err) => {
             return if err.contains(&user_constants::USER_NOT_FOUND) {
-                let resp: Response<(), ()> = Response::error(
-                    StatusCode::BAD_REQUEST,
-                    &user_constants::USERNAME_ALREADY_EXIST,
-                );
+                let resp: Response<(), ()> =
+                    Response::error(StatusCode::BAD_REQUEST, &user_constants::USER_NOT_FOUND);
                 HttpResponse::BadRequest().json(resp)
             } else if err.contains(&auth_constants::USERNAME_AND_PASSWORD_FAILED) {
                 let resp: Response<(), ()> = Response::error(
