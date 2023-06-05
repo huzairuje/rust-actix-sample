@@ -6,6 +6,8 @@ mod modules;
 mod routes;
 mod utils;
 
+use crate::database::database as db;
+use crate::routes::routes as route;
 use actix_web::http::StatusCode;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpResponse, HttpServer};
@@ -51,7 +53,7 @@ async fn main() -> std::io::Result<()> {
         println!("⚠️⚠️⚠️ Can't load logging on std, Failed to load env var ENABLE_LOG");
     }
 
-    let pool = database::database::initiate_database(config.clone())
+    let pool = db::initiate_database(config.clone())
         .await
         .unwrap_or_else(|err| {
             eprintln!("Failed to initialize database: {:?}", err);
@@ -67,7 +69,7 @@ async fn main() -> std::io::Result<()> {
                 db: pool.clone(),
                 cfg: config.clone(),
             }))
-            .configure(routes::routes::initiate_routes)
+            .configure(route::initiate_routes)
             .default_service(web::route().to(not_found))
             .wrap(cors_enable)
             .wrap(Logger::default())
