@@ -15,13 +15,13 @@ pub async fn get_user_by_id_service(pool: &PgPool, user_id: Uuid) -> Result<User
             match err {
                 Error::RowNotFound => {
                     // Handle the error
-                    eprintln!("error get detail notes {:?}", err);
+                    eprintln!("error get detail user {:?}", err);
                     let error_message = user_constants::USER_NOT_FOUND;
                     Err(error_message.parse().unwrap())
                 }
                 _ => {
                     // Handle the error
-                    eprintln!("error get detail notes {:?}", err);
+                    eprintln!("error get detail user {:?}", err);
                     let error_message = user_constants::DETAIL_USER_CANT_BE_FETCHED;
                     Err(error_message.parse().unwrap())
                 }
@@ -72,13 +72,13 @@ pub async fn get_user_by_username_service(
             match err {
                 Error::RowNotFound => {
                     // Handle the error
-                    eprintln!("error get detail notes {:?}", err);
+                    eprintln!("error get detail user {:?}", err);
                     let error_message = user_constants::USER_NOT_FOUND;
                     Err(error_message.parse().unwrap())
                 }
                 _ => {
                     // Handle the error
-                    eprintln!("error get detail notes {:?}", err);
+                    eprintln!("error get detail user {:?}", err);
                     let error_message = user_constants::DETAIL_USER_CANT_BE_FETCHED;
                     Err(error_message.parse().unwrap())
                 }
@@ -107,13 +107,13 @@ pub async fn get_user_by_username_with_user_response(
             return match err {
                 Error::RowNotFound => {
                     // Handle the error
-                    eprintln!("error get detail notes {:?}", err);
+                    eprintln!("error get detail user {:?}", err);
                     let error_message = user_constants::USER_NOT_FOUND;
                     Err(error_message.parse().unwrap())
                 }
                 _ => {
                     // Handle the error
-                    eprintln!("error get detail notes {:?}", err);
+                    eprintln!("error get detail user {:?}", err);
                     let error_message = user_constants::DETAIL_USER_CANT_BE_FETCHED;
                     Err(error_message.parse().unwrap())
                 }
@@ -134,7 +134,7 @@ pub async fn register_user_service(
         Ok(users) => users,
         Err(err) => {
             // Handle the error
-            eprintln!("Error getting existing notes: {:?}", err);
+            eprintln!("Error getting existing user: {:?}", err);
             let error_message = user_constants::EXISTING_USER_CANT_BE_FETCHED;
             return Err(error_message.parse().unwrap());
         }
@@ -280,7 +280,6 @@ pub async fn deactivate_user_service(pool: &PgPool, user_id: Uuid) -> Result<i32
 
 pub async fn get_all_users_service(pool: &PgPool) -> Result<Vec<UserResponse>, String> {
     match repository::get_all_user(pool).await {
-        // Ok(users) => Ok(users),
         Ok(users) => {
             let user_responses: Vec<UserResponse> = users
                 .into_iter()
