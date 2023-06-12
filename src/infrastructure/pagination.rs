@@ -3,19 +3,18 @@ use serde::Deserialize;
 const DEFAULT_SIZE: i32 = 10;
 
 #[derive(Debug, Deserialize, Clone)]
-#[allow(dead_code)]
 pub struct PaginationQuery {
     sort_order: Option<String>,
     order_by: Option<String>,
     size: Option<i32>,
     page: Option<i32>,
 }
-#[allow(dead_code)]
+
 pub fn get_total_pages(total_count: i32, page_size: i32) -> i32 {
     let d = f64::from(total_count) / f64::from(page_size);
     f64::ceil(d) as i32
 }
-#[allow(dead_code)]
+
 pub fn get_size(req: PaginationQuery) -> i32 {
     return if let Some(req_size) = req.size.clone() {
         req_size
@@ -23,7 +22,7 @@ pub fn get_size(req: PaginationQuery) -> i32 {
         DEFAULT_SIZE
     };
 }
-#[allow(dead_code)]
+
 pub fn get_page(req: PaginationQuery) -> i32 {
     return if let Some(req_page) = req.page.clone() {
         req_page

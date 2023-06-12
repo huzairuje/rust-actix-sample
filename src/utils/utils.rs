@@ -6,7 +6,6 @@ use jsonwebtoken::errors::ErrorKind::ExpiredSignature;
 use jsonwebtoken::{self, decode, Algorithm, DecodingKey, Validation};
 use uuid::Uuid;
 
-#[allow(dead_code)]
 pub fn get_current_user_uuid_from_jwt(cfg: &Config, req: HttpRequest) -> Result<Uuid, String> {
     let bearer_header: Option<&HeaderValue> = req.headers().get("Authorization");
 
