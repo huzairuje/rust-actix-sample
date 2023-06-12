@@ -133,7 +133,6 @@ pub async fn get_note_user_by_id(
 
 pub async fn get_notes_by_title(pool: &PgPool, title: String) -> Result<Vec<NoteModel>, Error> {
     let query = "SELECT * FROM notes where deleted_at is null and title = $1";
-    println!("query {:?} param {:?}", query, title);
     return sqlx::query_as::<_, NoteModel>(query)
         .bind(title)
         .fetch_all(pool)

@@ -211,3 +211,27 @@ pub async fn get_user_detail_handler_by_username(
         Response::success(StatusCode::OK, user_detail, constants::USER_FOUND);
     return HttpResponse::Ok().json(resp);
 }
+
+#[get("")]
+pub async fn get_get_all_users(data: web::Data<AppState>) -> impl Responder {
+    let user_detail: Vec<UserResponse> = match service::get_all_users_service(&data.db).await {
+        Ok(user) => user,
+        Err(err) => {
+            return if err.contains(constants::USER_NOT_FOUND) {
+                let resp: Response<(), ()> =
+                    Response::error(StatusCode::NOT_FOUND, constants::USER_NOT_FOUND);
+                HttpResponse::NotFound().json(resp)
+            } else {
+                let resp: Response<(), ()> = Response::error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    constants::DETAIL_USER_CANT_BE_FETCHED,
+                );
+                return HttpResponse::InternalServerError().json(resp);
+            }
+        }
+    };
+
+    let resp: Response<Vec<UserResponse>, ()> =
+        Response::success(StatusCode::OK, user_detail, constants::USER_FOUND);
+    return HttpResponse::Ok().json(resp);
+}

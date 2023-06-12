@@ -256,12 +256,12 @@ pub async fn deactivate_user_service(pool: &PgPool, user_id: Uuid) -> Result<i32
             return match err {
                 Error::RowNotFound => {
                     // Handle the error
-                    eprintln!("error get detail notes {:?}", err);
+                    eprintln!("error get detail users {:?}", err);
                     Err(user_constants::USER_NOT_FOUND.to_string())
                 }
                 _ => {
                     // Handle the error
-                    eprintln!("error get detail notes {:?}", err);
+                    eprintln!("error get detail users {:?}", err);
                     Err(user_constants::DETAIL_USER_CANT_BE_FETCHED.to_string())
                 }
             };
@@ -272,8 +272,40 @@ pub async fn deactivate_user_service(pool: &PgPool, user_id: Uuid) -> Result<i32
         Ok(user_row) => Ok(user_row),
         Err(err) => {
             // Handle the error
-            eprintln!("Error delete note: {:?}", err);
+            eprintln!("Error deactivate users: {:?}", err);
             Err(user_constants::USER_CANT_BE_DELETE.to_string())
+        }
+    }
+}
+
+pub async fn get_all_users_service(pool: &PgPool) -> Result<Vec<UserResponse>, String> {
+    match repository::get_all_user(pool).await {
+        // Ok(users) => Ok(users),
+        Ok(users) => {
+            let user_responses: Vec<UserResponse> = users
+                .into_iter()
+                .map(|user| UserResponse {
+                    id: user.id,
+                    username: user.username,
+                    fullname: user.fullname,
+                    email: user.email,
+                    phone_number: user.phone_number,
+                    created_at: user.created_at,
+                    updated_at: user.updated_at,
+                    deleted_at: user.deleted_at,
+                })
+                .collect();
+            Ok(user_responses)
+        }
+        Err(err) => {
+            match err {
+                _ => {
+                    // Handle the error
+                    eprintln!("error get all users {:?}", err);
+                    let error_message = user_constants::DETAIL_USER_CANT_BE_FETCHED;
+                    Err(error_message.parse().unwrap())
+                }
+            }
         }
     }
 }

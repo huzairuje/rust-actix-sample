@@ -95,10 +95,10 @@ pub struct UserResponse {
     pub fullname: Option<String>,
     pub email: Option<String>,
     pub phone_number: Option<String>,
-    #[serde(rename = "createdAt")]
+    #[serde(rename = "created_at")]
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
-    #[serde(rename = "updatedAt")]
+    #[serde(rename = "updated_at")]
     pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
-    #[serde(rename = "deletedAt")]
+    #[serde(rename = "deleted_at")]
     pub deleted_at: Option<chrono::DateTime<chrono::Utc>>,
 }

@@ -45,7 +45,7 @@ async fn main() -> std::io::Result<()> {
     if let Some(config_enable_log) = config.enable_log.as_ref() {
         if config_enable_log == "true" {
             if env::var_os("RUST_LOG").is_none() {
-                env::set_var("RUST_LOG", "actix_web=info");
+                env::set_var("RUST_LOG", "DEBUG");
             }
             env_logger::init();
         }
